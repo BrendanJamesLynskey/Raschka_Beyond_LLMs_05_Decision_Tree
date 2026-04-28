@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beyond Standard LLMs 05 &mdash; When to Reach for Non-Transformer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a; --bg-card: #0d1117; --bg-code: #161b22;
+            --text-primary: #e6edf3; --text-secondary: #8b949e;
+            --accent: #76B900; --accent-dim: #76B90044; --accent-glow: #76B90033;
+            --warm: #ffa657; --warm-dim: rgba(255,166,87,0.15);
+            --bad: #ff7b72;
+            --border: #21262d;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-body: 'Inter', sans-serif;
+            --max-width: 900px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg-primary); color: var(--text-primary);
+               font-family: var(--font-body); font-size: 17px; line-height: 1.7;
+               overflow-x: hidden; }
+        .hero { min-height: 100vh; display: flex; flex-direction: column;
+                justify-content: center; align-items: center;
+                padding: 2rem 1.5rem; text-align: center; position: relative; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 50%;
+                        transform: translateX(-50%); width: 600px; height: 600px;
+                        background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+                        pointer-events: none; z-index: 0; }
+        .hero > * { position: relative; z-index: 1; }
+        .series-label { font-family: var(--font-mono); font-size: 0.85rem;
+                        color: var(--accent); letter-spacing: 0.15em;
+                        text-transform: uppercase; margin-bottom: 1rem; }
+        .hero h1 { font-family: var(--font-display);
+                   font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700;
+                   color: var(--text-primary); line-height: 1.2; margin-bottom: 1rem; }
+        .hero h1 .accent { color: var(--accent); }
+        .hero .subtitle { font-size: 1.1rem; color: var(--text-secondary);
+                          max-width: 720px; margin-bottom: 2rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 0.5rem;
+                justify-content: center; margin-bottom: 2.5rem; }
+        .tag { font-family: var(--font-mono); font-size: 0.75rem;
+               padding: 0.25rem 0.75rem; border-radius: 999px;
+               border: 1px solid var(--accent); color: var(--accent);
+               background: var(--accent-dim); white-space: nowrap; }
+        .pipeline { display: flex; flex-wrap: wrap; align-items: center;
+                    justify-content: center; gap: 0.25rem; margin-bottom: 1rem;
+                    max-width: var(--max-width); }
+        .pipeline-step { font-family: var(--font-mono); font-size: 0.7rem;
+                         padding: 0.3rem 0.7rem; background: var(--bg-card);
+                         border: 1px solid var(--border); border-radius: 4px;
+                         color: var(--text-secondary); white-space: nowrap; }
+        .pipeline-arrow { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+        .slide { min-height: 100vh; max-width: var(--max-width);
+                 margin: 0 auto; padding: 4rem 1.5rem; position: relative;
+                 display: flex; flex-direction: column; justify-content: center; }
+        .slide-number { font-family: var(--font-display); font-size: 5rem;
+                        font-weight: 700; color: var(--accent-dim);
+                        position: absolute; top: 2rem; right: 1.5rem;
+                        line-height: 1; user-select: none; }
+        .slide h2 { font-family: var(--font-display); font-size: 1.9rem;
+                    font-weight: 700; color: var(--accent); margin-bottom: 1.5rem;
+                    line-height: 1.25; }
+        .slide h3 { font-family: var(--font-display); font-size: 1.3rem;
+                    font-weight: 600; color: var(--text-primary);
+                    margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .slide p { margin-bottom: 1rem; color: var(--text-secondary); }
+        .slide p strong { color: var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom: 1rem; padding-left: 1.5rem;
+                               color: var(--text-secondary); }
+        .slide li { margin-bottom: 0.4rem; }
+        .slide li strong { color: var(--text-primary); }
+        .slide code { font-family: var(--font-mono); font-size: 0.88em;
+                      background: var(--bg-code); border: 1px solid var(--border);
+                      padding: 0.05rem 0.35rem; border-radius: 3px; color: #c9d1d9; }
+        .table-wrap { overflow-x: auto; margin: 1.25rem 0; border-radius: 8px;
+                      border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: var(--bg-code); color: var(--accent); font-weight: 600;
+             text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);
+             font-family: var(--font-display); white-space: nowrap; }
+        td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border);
+             color: var(--text-secondary); vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        .diagram-grid { display: grid; gap: 0.75rem; margin: 1.5rem 0;
+                        padding: 1.5rem; background: var(--bg-card);
+                        border: 1px solid var(--border); border-radius: 8px; }
+        .diagram-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .diagram-panel { padding: 1rem; background: var(--bg-code);
+                         border: 1px solid var(--border); border-radius: 6px; }
+        .diagram-panel.accent-border { border-left: 3px solid var(--accent); }
+        .diagram-panel h4 { font-family: var(--font-display); font-size: 1rem;
+                            color: var(--accent); margin-bottom: 0.5rem; }
+        .diagram-panel p, .diagram-panel ul { font-size: 0.85rem; }
+        .callout { background: var(--bg-card); border-left: 3px solid var(--accent);
+                   border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+        .callout p { margin-bottom: 0; }
+        .callout p + p { margin-top: 0.5rem; }
+        .callout .callout-label { font-family: var(--font-mono); font-size: 0.75rem;
+                                  color: var(--accent); text-transform: uppercase;
+                                  letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+        .callout.warn { border-left-color: var(--warm); }
+        .callout.warn .callout-label { color: var(--warm); }
+        .contents-list { list-style: none; padding-left: 0; counter-reset: contents; }
+        .contents-list li { counter-increment: contents; padding: 0.6rem 0;
+                            border-bottom: 1px solid var(--border);
+                            display: flex; align-items: center; gap: 1rem; }
+        .contents-list li:last-child { border-bottom: none; }
+        .contents-list li::before { content: counter(contents, decimal-leading-zero);
+                                    font-family: var(--font-mono); font-size: 0.85rem;
+                                    color: var(--accent); min-width: 2rem; }
+        .contents-list a { color: var(--text-primary); text-decoration: none;
+                           transition: color 0.2s; }
+        .contents-list a:hover { color: var(--accent); }
+        .footer { text-align: center; padding: 3rem 1.5rem;
+                  color: var(--text-secondary); font-size: 0.85rem;
+                  border-top: 1px solid var(--border); max-width: var(--max-width);
+                  margin: 0 auto; }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .canvas-wrap { background: var(--bg-card); border: 1px solid var(--border);
+                       border-radius: 8px; padding: 1rem; margin: 1.25rem 0;
+                       overflow-x: auto; }
+        .deck-list { display: flex; flex-direction: column; gap: 0.6rem;
+                     list-style: none; padding: 0; }
+        .deck-card { display: flex; gap: 1rem; padding: 1rem 1.25rem;
+                     background: var(--bg-card); border: 1px solid var(--border);
+                     border-left: 3px solid var(--accent); border-radius: 6px; }
+        .deck-card .num { font-family: var(--font-mono); font-size: 0.8rem;
+                          color: var(--accent); min-width: 2rem; padding-top: 0.15rem; }
+        .deck-card .body { flex: 1; min-width: 0; }
+        .deck-card .deck-title { font-family: var(--font-display); font-size: 1.05rem;
+                                 font-weight: 600; color: var(--text-primary);
+                                 margin-bottom: 0.2rem; }
+        .deck-card a.deck-title { text-decoration: none; }
+        .deck-card a.deck-title:hover { color: var(--accent); }
+        .deck-card .desc { font-size: 0.92rem; color: var(--text-secondary); }
+        .ref-link { display: inline-block; padding: 0.4rem 0.8rem;
+                    border: 1px solid var(--accent); color: var(--accent);
+                    border-radius: 4px; text-decoration: none;
+                    font-family: var(--font-mono); font-size: 0.8rem;
+                    transition: background 0.15s; }
+        .ref-link:hover { background: var(--accent-dim); }
+
+        /* Decision tree widget */
+        .tree-card { background: var(--bg-card); border: 1px solid var(--border);
+                     border-left: 3px solid var(--accent); border-radius: 8px;
+                     padding: 1.25rem; margin: 1.25rem 0; }
+        .tree-q { font-family: var(--font-display); font-size: 1.15rem;
+                  font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; }
+        .tree-h { font-family: var(--font-mono); font-size: 0.75rem;
+                  color: var(--accent); text-transform: uppercase;
+                  letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+        .tree-help { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; }
+        .tree-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .tree-btn { font-family: var(--font-display); font-size: 0.95rem;
+                    padding: 0.55rem 1.1rem; background: var(--bg-code);
+                    border: 1px solid var(--accent); color: var(--accent);
+                    border-radius: 5px; cursor: pointer; font-weight: 600;
+                    transition: background 0.15s; }
+        .tree-btn:hover { background: var(--accent-dim); }
+        .tree-btn.alt { border-color: var(--text-secondary); color: var(--text-secondary); }
+        .tree-btn.alt:hover { background: var(--bg-card); }
+        .tree-result { padding: 1.25rem; border-radius: 6px;
+                       background: var(--bg-code); border: 1px solid var(--border);
+                       border-left: 3px solid var(--accent); }
+        .tree-result h4 { font-family: var(--font-display); font-size: 1.2rem;
+                          color: var(--accent); margin-bottom: 0.5rem; }
+        .tree-result p { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 0.7rem; }
+        .tree-result ul { padding-left: 1.4rem; font-size: 0.88rem; }
+        .tree-trail { margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px solid var(--border);
+                      font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); }
+        .tree-trail .sep { color: var(--accent); margin: 0 0.4rem; }
+        .tree-actions { margin-top: 0.9rem; display: flex; gap: 0.5rem; }
+
+        @media (max-width: 640px) {
+            .slide { padding: 3rem 1rem; min-height: auto; }
+            .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; }
+            .slide h2 { font-size: 1.5rem; }
+            .diagram-grid.cols-2, .diagram-grid.cols-3 { grid-template-columns: 1fr; }
+            .pipeline { gap: 0.15rem; }
+            .pipeline-step { font-size: 0.6rem; padding: 0.2rem 0.4rem; }
+            .hero h1 { font-size: 1.8rem; }
+            table { font-size: 0.78rem; }
+        }
+    </style>
+</head>
+<body>
+<header class="hero">
+    <div class="series-label">Beyond Standard LLMs &mdash; Companion to Sebastian Raschka &mdash; Presentation 05</div>
+    <h1>When to Reach for <span class="accent">Non-Transformer</span></h1>
+    <p class="subtitle">A practical decision-tree across all four architecture families. The standard transformer is still the right default &mdash; this deck is about when, specifically, the cost of leaving it pays for itself.</p>
+    <div class="tags">
+        <span class="tag">Companion</span>
+        <span class="tag">Sebastian Raschka</span>
+        <span class="tag">Decision Tree</span>
+        <span class="tag">Synthesis</span>
+        <span class="tag">Architecture Choice</span>
+    </div>
+    <div class="pipeline">
+        <span class="pipeline-step">Standard transformer</span>
+        <span class="pipeline-arrow">&#9135;</span>
+        <span class="pipeline-step">Linear hybrid</span>
+        <span class="pipeline-arrow">&#9135;</span>
+        <span class="pipeline-step">Diffusion</span>
+        <span class="pipeline-arrow">&#9135;</span>
+        <span class="pipeline-step">Code world model</span>
+        <span class="pipeline-arrow">&#9135;</span>
+        <span class="pipeline-step">Recursive</span>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.9rem;"><a class="ref-link" href="https://magazine.sebastianraschka.com/p/beyond-standard-llms" target="_blank" rel="noopener">Read the original article &rarr;</a></p>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We&rsquo;ll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">The Synthesis Question &mdash; Which Architecture, When?</a></li>
+        <li><a href="#slide-02">All Four Families on One Page</a></li>
+        <li><a href="#slide-03">The Cost-vs-Capability Frontier</a></li>
+        <li><a href="#slide-04">Why Standard Transformers Are Still the Default</a></li>
+        <li><a href="#slide-05">The Decision Tree &mdash; Five Questions</a></li>
+        <li><a href="#slide-06">Interactive: Walk Your Workload Through the Tree</a></li>
+        <li><a href="#slide-07">Composition &mdash; Using These Together</a></li>
+        <li><a href="#slide-08">Companion Decks &mdash; Where to Go Next</a></li>
+        <li><a href="#slide-09">Things to Try Yourself</a></li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">Where this deck sits in the series</div>
+        <p>The first four decks introduced each architecture family in detail. This one is the synthesis. The point is not to argue that standard transformers are obsolete &mdash; they are emphatically not &mdash; but to give you a structured way to recognise the workloads where one of the alternatives genuinely earns its complexity.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>The Synthesis Question &mdash; Which Architecture, When?</h2>
+    <p>The four architecture families covered in the article each pick a different point on the same trade-off surface. None of them is &ldquo;better&rdquo; than the standard decoder; each is <em>better at one specific thing</em>, at the cost of being worse at the others. That makes the choice load-bearing, and worth the deliberation.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>What standard transformers optimise for</h4>
+            <ul>
+                <li>Generality: one model can do summarisation, code, chat, reasoning, tool use.</li>
+                <li>Maturity: pre-training, RLHF, serving, evaluation are all well-understood.</li>
+                <li>Compose-ability: every framework, every harness, every dataset assumes this architecture.</li>
+                <li>Fluent prose at moderate context.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>What they don&rsquo;t optimise for</h4>
+            <ul>
+                <li>Long-context efficiency &mdash; the n&sup2; tax is real and hurts at 100k+.</li>
+                <li>On-device latency for short outputs &mdash; serial decoding is slow at small batch sizes.</li>
+                <li>Verifiable code reasoning &mdash; the model has no built-in execution intuition.</li>
+                <li>Constraint-satisfaction puzzles &mdash; the iterative-refinement bias is not native.</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>Each non-transformer family covered in this series targets exactly one of those weaknesses. The deck&rsquo;s job is to help you tell which weakness is <em>actually</em> blocking your workload, and which is just an architectural curiosity.</p>
+
+    <div class="callout">
+        <div class="callout-label">The simplest version of the rule</div>
+        <p>If you can&rsquo;t tell whether your workload is hitting one of the four named weaknesses &mdash; <em>stay on standard transformers</em>. The cost of switching architectures is large, and the savings only materialise when the original architecture was specifically what was hurting you.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>All Four Families on One Page</h2>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Architecture</th><th>What it&rsquo;s for</th><th>Trade-off</th><th>Maturity</th><th>Pick when</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>Standard transformer</strong></td>
+                    <td>Everything &mdash; the SOTA generalist.</td>
+                    <td>Quadratic attention, single-pass cost.</td>
+                    <td>Production-mature.</td>
+                    <td>Default. Anything that doesn&rsquo;t match a row below.</td>
+                </tr>
+                <tr>
+                    <td><strong>Linear-Attention Hybrid</strong></td>
+                    <td>Long context with bounded KV cache.</td>
+                    <td>Slight accuracy loss on exact-recall and reasoning. <em>MiniMax-M2 reverted.</em></td>
+                    <td>Open weights from 2&ndash;4 frontier labs.</td>
+                    <td>Workload routinely sees &gt;32k tokens AND throughput / cost matters.</td>
+                </tr>
+                <tr>
+                    <td><strong>Text Diffusion</strong></td>
+                    <td>Parallel decoding for short outputs.</td>
+                    <td>No streaming. Conditional-dependency failures. No tool use yet.</td>
+                    <td>One open release (LLaDA), one production hint (Gemini Diffusion).</td>
+                    <td>Short, single-turn outputs on latency-sensitive on-device deployments.</td>
+                </tr>
+                <tr>
+                    <td><strong>Code World Model</strong></td>
+                    <td>Code tasks needing execution intuition.</td>
+                    <td>Higher inference latency. Training pipeline is hard to reproduce.</td>
+                    <td>One major release (CWM 32B).</td>
+                    <td>Code debugging / refactor / SWE-bench-style. You want frontier code quality at non-frontier cost.</td>
+                </tr>
+                <tr>
+                    <td><strong>Small Recursive Transformer</strong></td>
+                    <td>Constraint-satisfaction puzzles.</td>
+                    <td>Tiny scope: grid puzzles only, today. Not a general LM.</td>
+                    <td>Research-grade (HRM, TRM).</td>
+                    <td>You have a structured puzzle that classical solvers handle but you want a learned solver.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Reading the table</h3>
+    <ul>
+        <li>The <em>Trade-off</em> column is the price of admission. None of these is free.</li>
+        <li>The <em>Maturity</em> column is honest. Three of the four are not yet ecosystem-standard. Be willing to invest in tooling if you adopt.</li>
+        <li>The <em>Pick when</em> column is conjunctive: the conditions that need to hold for the architecture to pay back its cost. If you don&rsquo;t check all of them, default back to a standard transformer.</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>The Cost-vs-Capability Frontier</h2>
+    <p>It is useful to picture all five families on one chart. The x-axis is &ldquo;capability&rdquo; (broadly construed: SOTA-tier reasoning at one end, narrow specialist at the other). The y-axis is &ldquo;cost per useful answer&rdquo;. Each architecture sits at a different point.</p>
+
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .ax { stroke: #21262d; stroke-width: 1; }
+                .axl { fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+                .pt-std { fill: #76B900; }
+                .pt    { fill: #ffa657; }
+                .pt-lb { fill: #e6edf3; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .pt-sub{ fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .pt-r  { fill: rgba(118,185,0,0.06); stroke: #76B900; stroke-dasharray: 4,3; }
+            </style>
+            <line class="ax" x1="60"  y1="40"  x2="60"  y2="320"/>
+            <line class="ax" x1="60"  y1="320" x2="720" y2="320"/>
+            <text class="axl" x="60"  y="340" text-anchor="middle">narrow</text>
+            <text class="axl" x="720" y="340" text-anchor="middle">general</text>
+            <text class="axl" x="390" y="356" text-anchor="middle">capability breadth &rarr;</text>
+            <text class="axl" x="40"  y="320" text-anchor="end">cheap</text>
+            <text class="axl" x="40"  y="40"  text-anchor="end">expensive</text>
+            <text class="axl" x="20"  y="180" text-anchor="middle" transform="rotate(-90 20 180)">&larr; cost per answer</text>
+
+            <!-- Standard transformer: high cost, high generality -->
+            <circle class="pt-std" cx="640" cy="80" r="9"/>
+            <text class="pt-lb" x="640" y="65" text-anchor="middle">Standard transformer</text>
+            <text class="pt-sub" x="640" y="100" text-anchor="middle">SOTA generalist</text>
+
+            <!-- Linear hybrid: cheaper at long context, slightly less general -->
+            <circle class="pt" cx="540" cy="160" r="9"/>
+            <text class="pt-lb" x="540" y="145" text-anchor="middle">Linear hybrid</text>
+            <text class="pt-sub" x="540" y="180" text-anchor="middle">long-ctx efficient</text>
+
+            <!-- Code world model: narrower target, much cheaper per code task -->
+            <circle class="pt" cx="380" cy="220" r="9"/>
+            <text class="pt-lb" x="380" y="205" text-anchor="middle">Code world model</text>
+            <text class="pt-sub" x="380" y="240" text-anchor="middle">code, with state</text>
+
+            <!-- Diffusion: short outputs, on-device, cheap -->
+            <circle class="pt" cx="270" cy="270" r="9"/>
+            <text class="pt-lb" x="270" y="255" text-anchor="middle">Text diffusion</text>
+            <text class="pt-sub" x="270" y="290" text-anchor="middle">short on-device</text>
+
+            <!-- Recursive: tiny, narrowest -->
+            <circle class="pt" cx="130" cy="305" r="9"/>
+            <text class="pt-lb" x="130" y="290" text-anchor="middle">Recursive (TRM)</text>
+            <text class="pt-sub" x="130" y="325" text-anchor="middle">grid puzzles</text>
+        </svg>
+    </div>
+
+    <h3>Three things to read off the chart</h3>
+    <ul>
+        <li><strong>The standard transformer is the only generalist.</strong> Everything else trades breadth for either cost or specialisation. If you don&rsquo;t know your workload type, you don&rsquo;t want to leave the top-right corner.</li>
+        <li><strong>The frontier is not a curve, it&rsquo;s a region.</strong> A Pareto-optimal choice depends on which dimension &mdash; cost or capability &mdash; you weigh more. There&rsquo;s no single &ldquo;next architecture&rdquo;.</li>
+        <li><strong>The cheap-but-narrow corner is where most of the action is.</strong> TRM, diffusion-on-device, CWM-for-code &mdash; all sit on the bottom-left, where the wins are biggest in absolute cost but only on a narrow workload slice.</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">A practical reading</div>
+        <p>If the standard transformer is overkill for what you&rsquo;re doing, you don&rsquo;t need to replace it &mdash; you need to <em>shrink the part of your workload it&rsquo;s overkill for</em>. A frontier model that delegates appropriate tasks to a 7M-parameter recursive solver is cheaper <em>and</em> more capable than either alone. That is the composition story on slide 7.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Why Standard Transformers Are Still the Default</h2>
+    <p>Before we walk the decision tree, a deliberate caution: <strong>most workloads should still run on a standard decoder</strong>. The four alternatives are real, but the cost of switching is rarely paid back unless the workload has a specific shape.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Sociological reasons</h4>
+            <ul>
+                <li>The ecosystem assumes the standard architecture: vLLM, sglang, Triton kernels, RLHF tooling, eval frameworks, mature serving stacks.</li>
+                <li>Engineer mind-share is calibrated on the standard model. Hiring &amp; on-boarding is faster.</li>
+                <li>Your customer is probably using a standard-LLM-flavored mental model.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Technical reasons</h4>
+            <ul>
+                <li>RLHF / DPO / GRPO recipes are tuned for standard decoders.</li>
+                <li>Tool-calling protocols (OpenAI / Anthropic / Google) assume sequential token generation.</li>
+                <li>Prompt-cache, KV-cache offload, speculative decoding &mdash; all the cost-cutting optimisations are mature on standard architectures and not yet on the others.</li>
+                <li>Standard models have a head start of a year or more on every benchmark you actually care about.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Where this caution does <em>not</em> apply</h3>
+    <ul>
+        <li>You are <strong>at scale</strong> (millions of requests per day) and the cost reduction from a niche architecture meaningfully changes your unit economics.</li>
+        <li>You have a <strong>specific bottleneck</strong> (very long context, on-device latency, code execution understanding, or constraint solving) that the standard decoder is empirically not addressing.</li>
+        <li>You are doing <strong>research</strong> on the architecture itself.</li>
+    </ul>
+
+    <div class="callout warn">
+        <div class="callout-label">Be especially wary if</div>
+        <p>Your motivation is &ldquo;the new thing is more interesting&rdquo;. Switching architecture is not a tech-debt write-off &mdash; it is debt accrual. The decision tree on the next slide is structured to make you justify the switch, not to encourage it.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>The Decision Tree &mdash; Five Questions</h2>
+    <p>Five questions in order. The first one whose answer is &ldquo;yes&rdquo; selects an architecture; if you reach the end with no &ldquo;yes&rdquo;, you stay on a standard transformer. The widget on the next slide implements the same flow interactively.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Q1. Constraint-satisfaction puzzle?</h4>
+            <p>Is your task a structured puzzle (Sudoku, ARC, scheduling, layout, planning over a fixed grid) where the input and output are bounded and the problem has the iterative-refinement shape?</p>
+            <p><strong>Yes &rarr; Small Recursive Transformer.</strong> 7M parameters, $500 to train, beats LLMs on this task family. Not a chat model.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Q2. Code execution intuition needed?</h4>
+            <p>Is your workload code that requires the model to reason about <em>what the code does at runtime</em> &mdash; debugging, multi-step refactoring, fixing test failures, SWE-bench-style?</p>
+            <p><strong>Yes &rarr; Code World Model.</strong> CWM 32B matches gpt-oss-120b at 4&times; smaller. The world-modelling mid-training is what buys this.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Q3. Routinely &gt;32k context AND cost-sensitive?</h4>
+            <p>Do most of your inference calls process &gt;32&nbsp;k tokens, AND is the GPU memory or per-token cost a binding constraint? Both must be true.</p>
+            <p><strong>Yes &rarr; Linear-Attention Hybrid.</strong> Qwen3-Next, Kimi Linear. 75% KV-cache reduction, up to 6&times; decoding throughput. Watch for accuracy regressions on multi-turn reasoning.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Q4. Short single-turn output, on-device, latency-bound?</h4>
+            <p>Is the workload short outputs (a few hundred tokens), running on a phone or low-power device, where time-to-final-answer dominates? AND no tool use AND no streaming UX?</p>
+            <p><strong>Yes &rarr; Text Diffusion.</strong> LLaDA-class. Replaces distilled small models. Don&rsquo;t use for chat or reasoning.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Q5 &mdash; the catch-all</div>
+        <p>If you reached Q5, the answer is <strong>standard transformer</strong>, possibly with one of: extended thinking / reasoning mode, prompt caching, RAG, agent-harness scaffolding. Most workloads land here. The four alternatives are not <em>the</em> future &mdash; they are <em>a few specific futures</em>.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Interactive: Walk Your Workload Through the Tree</h2>
+    <p>Answer the questions about your actual workload &mdash; not in the abstract. The tree only gives a useful recommendation when the inputs are honest about what your task is and isn&rsquo;t.</p>
+
+    <div class="tree-card" id="tree-root">
+        <div class="tree-h" id="tree-step">step 1 of 4</div>
+        <div class="tree-q" id="tree-question"></div>
+        <div class="tree-help" id="tree-helptext"></div>
+        <div class="tree-options" id="tree-options"></div>
+        <div class="tree-trail" id="tree-trail"></div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">A useful self-check</div>
+        <p>If the recommendation surprises you, the question to ask is <em>which question did I get wrong?</em> Most of the wrong-answer regret comes from over-claiming on Q3 (&ldquo;long context&rdquo; means the routine bulk of traffic, not edge cases) or Q1 (a chat task with structure isn&rsquo;t a constraint-satisfaction puzzle).</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>Composition &mdash; Using These Together</h2>
+    <p>The decision tree picks one architecture per workload. The richer story is composition: a system that uses several at once, each on the slice of the problem it&rsquo;s best at.</p>
+
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>Frontier LLM as orchestrator</h4>
+            <p>A standard transformer takes the user&rsquo;s request, decomposes it, decides what kind of subtask each piece is, and routes to the right specialist.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Specialist as tool</h4>
+            <p>A 7M recursive solver is exposed as a tool. The orchestrator detects a constraint problem in the conversation, packages it as a grid, calls the tool, gets the answer.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Architecture per subtask</h4>
+            <p>Long-document analysis: linear hybrid. Code edit: code world model. Final natural-language reply: standard. The user sees one assistant.</p>
+        </div>
+    </div>
+
+    <h3>Raschka&rsquo;s closing speculation</h3>
+    <p>The article ends on this exact theme: <em>tiny reasoning models as &ldquo;tools&rdquo; for tool-calling LLMs, similar to how systems use Python or calculator APIs</em>. The four families covered in this series are not in competition with each other; they are likely to be deployed together. The interesting question is not <em>which one wins</em>; it is <em>which orchestrator framework will package them together first</em>.</p>
+
+    <div class="callout">
+        <div class="callout-label">A 2026 prediction worth holding lightly</div>
+        <p>The reference architecture for serious agentic systems by end of 2026 will probably look like this: a frontier transformer plus 3&ndash;5 small specialised solvers behind a tool interface. None of the individual components is novel; the orchestration is the engineering. Whoever builds the cleanest abstraction for &ldquo;route this subtask to the right architecture&rdquo; will own the next platform layer.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Companion Decks &mdash; Where to Go Next</h2>
+    <p>This is the final deck of the five-deck series. To go deeper on any of the four architecture families, jump to the corresponding deck:</p>
+
+    <ol class="deck-list">
+        <li class="deck-card">
+            <div class="num">01</div>
+            <div class="body">
+                <a class="deck-title" href="https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_01_Linear_Attention_Hybrids/">Linear-Attention Hybrids &rarr;</a>
+                <div class="desc">MiniMax-M1, Qwen3-Next, DeepSeek V3.2, Kimi Linear. Gated DeltaNet, the 3:1 hybrid pattern, and why MiniMax-M2 reverted. KV-cache calculator widget.</div>
+            </div>
+        </li>
+        <li class="deck-card">
+            <div class="num">02</div>
+            <div class="body">
+                <a class="deck-title" href="https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_02_Text_Diffusion/">Text Diffusion Models &rarr;</a>
+                <div class="desc">LLaDA, Gemini Diffusion. Iterative denoising, parallel decoding, conditional-dependency limits. Diffusion-vs-autoregressive visualiser.</div>
+            </div>
+        </li>
+        <li class="deck-card">
+            <div class="num">03</div>
+            <div class="body">
+                <a class="deck-title" href="https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_03_Code_World_Models/">Code World Models &rarr;</a>
+                <div class="desc">CWM 32B. World-modelling mid-training. SWE-bench parity at 4&times; smaller. World-model rollout stepper.</div>
+            </div>
+        </li>
+        <li class="deck-card">
+            <div class="num">04</div>
+            <div class="body">
+                <a class="deck-title" href="https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_04_Small_Recursive_Transformers/">Small Recursive Transformers &rarr;</a>
+                <div class="desc">HRM, TRM (7M params). Iterative self-loops for ARC-AGI. The surprising attention-not-required ablation. Recursive trace viewer.</div>
+            </div>
+        </li>
+    </ol>
+
+    <div class="callout">
+        <div class="callout-label">Where this fits in the broader index</div>
+        <p>This series is part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Modern_Architectures">Modern Architectures sub-hub</a> &mdash; itself a leaf of the <a href="https://github.com/BrendanJamesLynskey/LLMs">LLMs hub</a> covering transformer internals, training, hardware, retrieval, agents, evaluation and safety. This deck closes the Raschka companion; the rest of the modern-architectures sub-hub goes broader (MoE, state-space models, long-context techniques, hybrids).</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>Things to Try Yourself</h2>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>10 minutes &mdash; walk one workload through the tree</h4>
+            <p>Pick the most cost- or capability-binding production workload you have. Walk it through the widget. If the result is &ldquo;standard transformer&rdquo;, that is also a useful answer &mdash; it tells you the migrating-architecture conversation isn&rsquo;t the highest-leverage one for that workload.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>1 hour &mdash; do it for three workloads</h4>
+            <p>One workload sometimes hides another. The customer&rsquo;s &ldquo;chat assistant&rdquo; is often three workloads stitched together: short Q&amp;A, long-document RAG, and occasional code edits. Each of those may pick a different architecture. The richest answers come from decomposing.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>An afternoon &mdash; cost the switch</h4>
+            <p>For each &ldquo;not standard&rdquo; recommendation, write down: training-data engineering, serving stack changes, eval-harness retooling, customer-visible regressions. The number is usually larger than expected. That is the bar the saving needs to clear.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>A weekend &mdash; build a routing prototype</h4>
+            <p>Wire a standard LLM with one specialist tool from this series &mdash; whichever the tree pointed you at. The discomfort of designing the &ldquo;when should the orchestrator delegate?&rdquo; logic teaches you more about composition than any article.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Read the source</h4>
+            <p>Re-read Raschka&rsquo;s essay with the four decks open in adjacent tabs. The article is shorter than the decks combined for a reason &mdash; he is dense and you might want to revisit any section after seeing the technical detail.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Watch for &mdash;</h4>
+            <p>The first agent framework that exposes &ldquo;route to architecture X&rdquo; as a first-class concept. LangGraph, the OpenAI Agents SDK, MCP-flavoured stacks &mdash; whichever lands the abstraction first will set the convention for years.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">A diagnostic for your team, in two questions</div>
+        <p><em>What does our standard transformer do <strong>badly enough</strong> that switching architectures pays for itself? And could we keep it as the orchestrator while a specialist handles the bad parts?</em> If both answers exist, you have a project. If neither does, you have a reasonable status quo &mdash; and that is also a valid finding.</p>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Companion to <a href="https://magazine.sebastianraschka.com/p/beyond-standard-llms" target="_blank" rel="noopener">Sebastian Raschka, &ldquo;Beyond Standard LLMs&rdquo;</a></p>
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Modern_Architectures">Modern Architectures Series</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;"><a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Modern_Architectures">Back to Series Index</a></p>
+</footer>
+
+<script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.slide').forEach(slide => {
+        slide.style.opacity = '0';
+        slide.style.transform = 'translateY(30px)';
+        slide.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(slide);
+    });
+
+    // Decision tree widget
+    const QUESTIONS = [
+        {
+            id: 'q1',
+            short: 'constraint-satisfaction puzzle?',
+            text: 'Is your task a structured puzzle with bounded input/output?',
+            help: 'Sudoku, ARC, scheduling, layout, planning over a fixed grid &mdash; tasks where iterative refinement is natural and a classical solver could plausibly compete.',
+            yes: 'recursive',
+            no:  'q2'
+        },
+        {
+            id: 'q2',
+            short: 'code with execution intuition?',
+            text: 'Is your workload code that requires reasoning about what the code does at runtime?',
+            help: 'Debugging, multi-step refactors, fixing test failures, SWE-bench-style. NOT general code completion or code explanation.',
+            yes: 'cwm',
+            no:  'q3'
+        },
+        {
+            id: 'q3',
+            short: 'long context AND cost-sensitive?',
+            text: 'Does the bulk of your traffic process &gt;32k tokens, AND is GPU memory or per-token cost the binding constraint?',
+            help: 'Both must be true. A few long-context edge cases do not justify switching architecture; the typical request shape does.',
+            yes: 'linear',
+            no:  'q4'
+        },
+        {
+            id: 'q4',
+            short: 'short on-device single-turn?',
+            text: 'Short outputs, latency-bound, on-device or low-power, no tool use, no streaming UX?',
+            help: 'A few hundred tokens of output. Phones, edge devices. Not chat; not agentic; not reasoning. The "distilled small model" niche.',
+            yes: 'diffusion',
+            no:  'std'
+        }
+    ];
+
+    const RESULTS = {
+        recursive: {
+            title: 'Small Recursive Transformer',
+            tag: 'TRM / HRM',
+            why: 'Constraint-satisfaction puzzles are exactly what recursive transformers are good at. A 7M-parameter solver beats frontier LLMs on ARC-AGI and trains in two days for $500.',
+            caveats: [
+                'Scope is grid-shaped puzzles only as of early 2026.',
+                'You will likely deploy it as a tool inside a larger orchestrator, not as a chat model.',
+                'Training-pipeline tooling is research-grade; expect to do engineering work to make it production-shaped.'
+            ],
+            link: 'https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_04_Small_Recursive_Transformers/'
+        },
+        cwm: {
+            title: 'Code World Model',
+            tag: 'CWM 32B',
+            why: 'World-modelling mid-training gives the model execution intuition that a standard code-LLM does not have. SWE-bench parity at 4&times; smaller parameter count.',
+            caveats: [
+                'Inference latency is higher than a standard code LLM at the same size.',
+                'Reproducing the technique requires significant data engineering: instrumentation, sandbox, trace generation.',
+                'Published evidence is mostly Python; other languages plausible but unproven.'
+            ],
+            link: 'https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_03_Code_World_Models/'
+        },
+        linear: {
+            title: 'Linear-Attention Hybrid',
+            tag: 'Qwen3-Next / Kimi Linear / DeepSeek V3.2',
+            why: 'Bounded KV-cache regardless of context length. 75% memory cut, up to 6&times; decoding throughput on long contexts. The 3:1 hybrid pattern preserves exact-recall capabilities.',
+            caveats: [
+                'Slight accuracy degradation on multi-turn reasoning and exact-recall tasks &mdash; MiniMax-M2 reverted to full attention.',
+                'Recipe and tooling are still maturing; serving stacks have caught up but RLHF is less battle-tested.',
+                'Verify your specific workload doesn\'t hit the recall regressions before committing.'
+            ],
+            link: 'https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_01_Linear_Attention_Hybrids/'
+        },
+        diffusion: {
+            title: 'Text Diffusion Model',
+            tag: 'LLaDA / Gemini Diffusion',
+            why: 'Parallel decoding via iterative denoising means 16-64 forward passes for 2 000 tokens of output instead of 2 000 sequential passes. Wall-clock latency win is real.',
+            caveats: [
+                'No streaming. Output materialises only at the last denoising step.',
+                'Conditional-dependency failures (the "New York" vs "New City" problem).',
+                'Tool-calling and reasoning-mode are unproven; expect on-device-class deployments only.'
+            ],
+            link: 'https://brendanjameslynskey.github.io/Raschka_Beyond_LLMs_02_Text_Diffusion/'
+        },
+        std: {
+            title: 'Standard Transformer (stay)',
+            tag: 'GPT / Claude / Llama / Qwen / Gemini',
+            why: 'None of the four niche architectures clearly applies. The cost of switching is not paid back. Standard decoder, possibly with reasoning mode, prompt caching, RAG, and an agent harness, is the right default.',
+            caveats: [
+                'Re-check Q3 if you have any long-context workloads &mdash; "occasionally hits 64k" is not the same as "routinely processes 64k+".',
+                'Re-check Q2 if you have any code-execution-style tasks; the CWM advantage is largest where the standard model fails silently.',
+                'Composition is still on the table: standard transformer as orchestrator with one specialist tool can give you most of the wins without committing to a full architecture switch.'
+            ],
+            link: '#slide-04'
+        }
+    };
+
+    let currentId = 'q1';
+    const trail = [];
+
+    function render() {
+        const q = QUESTIONS.find(x => x.id === currentId);
+        const card = document.getElementById('tree-root');
+        const stepEl = document.getElementById('tree-step');
+        const qEl    = document.getElementById('tree-question');
+        const helpEl = document.getElementById('tree-helptext');
+        const optEl  = document.getElementById('tree-options');
+        const trailEl= document.getElementById('tree-trail');
+
+        if (q) {
+            const idx = QUESTIONS.indexOf(q) + 1;
+            stepEl.textContent = 'step ' + idx + ' of ' + QUESTIONS.length;
+            qEl.textContent    = q.text;
+            helpEl.innerHTML   = q.help;
+            optEl.innerHTML    = '';
+            const yesBtn = document.createElement('button');
+            yesBtn.className   = 'tree-btn';
+            yesBtn.textContent = 'Yes';
+            yesBtn.onclick     = () => advance(q.yes, q.id, 'yes');
+            const noBtn = document.createElement('button');
+            noBtn.className    = 'tree-btn alt';
+            noBtn.textContent  = 'No';
+            noBtn.onclick      = () => advance(q.no, q.id, 'no');
+            optEl.appendChild(yesBtn);
+            optEl.appendChild(noBtn);
+            renderTrail();
+        } else {
+            // Result
+            const r = RESULTS[currentId];
+            stepEl.textContent = 'recommendation';
+            qEl.textContent    = r.title;
+            helpEl.innerHTML   = '<span style="color:var(--accent)">' + r.tag + '</span> &middot; ' + r.why;
+            optEl.innerHTML    = '';
+            const cav = document.createElement('div');
+            cav.className = 'tree-result';
+            cav.innerHTML = '<h4>Caveats &amp; expectations</h4><ul>' +
+                r.caveats.map(c => '<li>' + c + '</li>').join('') + '</ul>';
+            optEl.appendChild(cav);
+            const actions = document.createElement('div');
+            actions.className = 'tree-actions';
+            const more = document.createElement('a');
+            more.className   = 'ref-link';
+            more.href        = r.link;
+            more.textContent = 'Deeper deck on this architecture &rarr;';
+            const restart = document.createElement('button');
+            restart.className   = 'tree-btn alt';
+            restart.textContent = 'Start over';
+            restart.onclick     = reset;
+            actions.appendChild(more);
+            actions.appendChild(restart);
+            optEl.appendChild(actions);
+            renderTrail();
+        }
+    }
+
+    function renderTrail() {
+        const trailEl = document.getElementById('tree-trail');
+        if (trail.length === 0) { trailEl.innerHTML = ''; return; }
+        trailEl.innerHTML = 'path: ' + trail.map(t => {
+            const q = QUESTIONS.find(x => x.id === t.from);
+            return q.short + '&nbsp;<span style="color:var(--accent)">' + t.ans + '</span>';
+        }).join('<span class="sep">&middot;</span>');
+    }
+
+    function advance(toId, fromId, ans) {
+        trail.push({ from: fromId, ans: ans });
+        currentId = toId;
+        render();
+    }
+
+    function reset() {
+        currentId = 'q1';
+        trail.length = 0;
+        render();
+    }
+
+    render();
+</script>
+</body>
+</html>
