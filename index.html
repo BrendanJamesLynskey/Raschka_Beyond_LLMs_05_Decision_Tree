@@ -9,12 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0a0a0a; --bg-card: #0d1117; --bg-code: #161b22;
-            --text-primary: #e6edf3; --text-secondary: #8b949e;
-            --accent: #76B900; --accent-dim: #76B90044; --accent-glow: #76B90033;
-            --warm: #ffa657; --warm-dim: rgba(255,166,87,0.15);
-            --bad: #ff7b72;
-            --border: #21262d;
+            --bg-primary: #0f2027; --bg-card: #13272f; --bg-code: #182f38;
+            --text-primary: #ede7dd; --text-secondary: #8ca5a9;
+            --accent: #83c395; --accent-dim: #83c39544; --accent-glow: #83c39533;
+            --warm: #eac48b; --warm-dim: rgba(234,196,139,0.15);
+            --bad: #f48f70;
+            --border: #23404a;
             --font-display: 'Space Grotesk', sans-serif;
             --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
             --font-body: 'Inter', sans-serif;
@@ -77,7 +77,7 @@
         .slide li strong { color: var(--text-primary); }
         .slide code { font-family: var(--font-mono); font-size: 0.88em;
                       background: var(--bg-code); border: 1px solid var(--border);
-                      padding: 0.05rem 0.35rem; border-radius: 3px; color: #c9d1d9; }
+                      padding: 0.05rem 0.35rem; border-radius: 3px; color: #cfd7d1; }
         .table-wrap { overflow-x: auto; margin: 1.25rem 0; border-radius: 8px;
                       border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
@@ -87,7 +87,7 @@
         td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border);
              color: var(--text-secondary); vertical-align: top; }
         tr:last-child td { border-bottom: none; }
-        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        tr:nth-child(even) td { background: rgba(19,39,47,0.5); }
         .diagram-grid { display: grid; gap: 0.75rem; margin: 1.5rem 0;
                         padding: 1.5rem; background: var(--bg-card);
                         border: 1px solid var(--border); border-radius: 8px; }
@@ -336,13 +336,13 @@
     <div class="canvas-wrap">
         <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg">
             <style>
-                .ax { stroke: #21262d; stroke-width: 1; }
-                .axl { fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-                .pt-std { fill: #76B900; }
-                .pt    { fill: #ffa657; }
-                .pt-lb { fill: #e6edf3; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
-                .pt-sub{ fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .pt-r  { fill: rgba(118,185,0,0.06); stroke: #76B900; stroke-dasharray: 4,3; }
+                .ax { stroke: #23404a; stroke-width: 1; }
+                .axl { fill: #8ca5a9; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+                .pt-std { fill: #83c395; }
+                .pt    { fill: #eac48b; }
+                .pt-lb { fill: #ede7dd; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .pt-sub{ fill: #8ca5a9; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .pt-r  { fill: rgba(131,195,149,0.06); stroke: #83c395; stroke-dasharray: 4,3; }
             </style>
             <line class="ax" x1="60"  y1="40"  x2="60"  y2="320"/>
             <line class="ax" x1="60"  y1="320" x2="720" y2="320"/>
